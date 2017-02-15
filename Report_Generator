@@ -1,0 +1,213 @@
+#!/bin/bash
+#
+# Created by SLP of NW3C 10/11/2016
+# This batch file is used to generate an HTML REPORT for  
+# Reporting Results of an investigation.
+#
+# usage: Report_GEN <Highest Level Report Directory> <output directory> 
+#
+#   <Highest Level Report Directory> use absolute addressing 
+#   <output directory>+ use absolute addressing
+#   <path to a Banner Text File>
+#   <path to Image for Banner>
+#   Other options not present yet, 
+#    - BANNEROBJ=OBJ"$3"
+#    - IMAGEOBJ=OBJ"$4"
+#    - Disclaimer information
+#    - Case Agent/Investigator/Detective.
+
+# MAIN Report index file
+MAIN_RPT="report_index.html"
+
+#FILEOBJ is the current file or directory being reviewed
+#RESULTS - function output
+RESULTS=""
+
+# set -x
+
+#********************************************************************************************************************
+#********************************************************************************************************************
+#**********************        validate cli variables      ***********************************************************************
+#********************************************************************************************************************
+#********************************************************************************************************************
+
+SRC_DIRECTORY="$1"
+OUT_DIRECTORY="$2"
+
+IMAGE_DIR=$OUT_DIRECTORY/RPT_IMAGES
+
+    if [[ ! -e $IMAGE_DIR ]] 
+        then
+            mkdir $IMAGE_DIR
+        fi
+
+        chmod 777 $IMAGE_DIR
+
+
+# Does the Source Directory exits
+
+    if [ -d "$SRC_DIRECTORY" ]
+        then
+        echo "Source Directory exists"
+        if [ -r "$SRC_DIRECTORY" ]
+            then 
+            echo "Pgm Can read the Source Directory"
+        else
+            echo "No Read Permission on Source Directory"
+            exit 2
+        fi
+    else
+        echo "Source Directory Does not Exist"
+        exit 2
+    fi
+    
+#   Does the OUT_DIRECTORY Exists 
+
+    if [ -d "$OUT_DIRECTORY" ]
+        then
+        echo "OUT_DIRECTORY exists"
+    else
+        echo "OUT_DIRECTORY Does not Exist"
+        if [ "$OUT_DIRECTORY" == "Select*" ]
+            then
+            echo "An OUT_DIRECTORY was not selected"
+            echo "Exiting"
+            exit 1
+        fi
+    fi
+
+#********************************************************************************************************************
+#********************************************************************************************************************
+#**********************        Functions      ***********************************************************************
+#********************************************************************************************************************
+#********************************************************************************************************************
+
+
+function HTMLHEADER() {
+
+FILE_OBJ="$1"
+#    echo "$FILE_OBJ"
+    echo "<html><header>" >> "$FILE_OBJ"
+#    if ![ "$IMAGEOBJ"="OBJ"]
+#        then 
+#        echo "</header><body background="$IMAGEOBJ"><P><P><HR>" >> "$FILE_OBJ"
+#    else
+        echo "</header><body><P><P><HR>" >> "$FILE_OBJ"
+#   fi    
+
+echo "<table border=1><tr><td width=\"40%\"></td> " >> "$FILE_OBJ"
+echo "<td width=60%><h1>Banner.txt goes here</h1><P></td>" >> "$FILE_OBJ"
+echo "</tr></table>" >> "$FILE_OBJ"
+echo "<hr>" >> "$FILE_OBL" 
+    
+echo "<table><tr><td width=\"15%\"></td><td width=\"70%\"></td><td width=\"15%\"></td></tr>"
+}
+#********************************************************************************************************************
+
+function HTMLFOOTER() {
+    echo "--------------------------------------------------------------------------------------------" >> "$FILE_OBJ"
+    echo "</body></html>" >>  "$FILE_OBJ"
+}
+#********************************************************************************************************************
+
+function ADDTHUMBNAIL() {
+# Create a Thumbnail and embed it into the report At the right location
+JPGOBJECT="$1"
+
+	if [ -f "$JPGOBJECT" ]
+	then 
+
+           file "$JPGOBJECT" > typ_object.txt    
+            if grep -q JPEG typ_object.txt
+            then
+            echo "  File: $JPGOBJECT is a Graphic file"
+                cp $JPGOBJECT $IMAGE_DIR
+                outputfile="$IMAGE_DIR/tn_$(basename "$JPGOBJECT")"
+                REF_FILE="$IMAGE_DIR/$(basename "$JPGOBJECT")"
+                
+                convert $JPGOBJECT -resize 200x200 "$outputfile"
+            echo "<a href="$REF_FILE"><img src=\"$outputfile\" height=\"200\" width=\"200\"></a><p>" >> $SENDTOHTML # Needs relative link
+            else 
+            echo "  File: $JPGOBJECT"
+                    
+            fi
+        fi
+}
+#********************************************************************************************************************
+#********************************************************************************************************************
+#**********************************   Main program ******************************************************************
+#********************************************************************************************************************
+#********************************************************************************************************************
+
+
+find "$SRC_DIRECTORY" -print0 | while IFS= read -r -d '' file
+# create list of file to examine. into file DIRLIST
+
+    do 
+        echo "$file this is file"
+        DIRLIST="$(dirname "$file")"
+        echo -e $DIRLIST
+
+
+
+        if [ -d $OUT_DIRECTORY ]
+            then 
+                SENDTOHTML="$OUT_DIRECTORY/""$(basename "$DIRLIST").html"
+                echo $SENDTOHTML
+            else
+                echo "No Output Directory"
+                exit 1
+        fi
+        
+        echo "$SENDTOHTML"
+        echo ""
+       
+        chmod 777 "$SENDTOHTML"
+
+        if [[ -d $file ]]
+        then
+            echo "output file should be $SENDTOHTML"
+            
+        else
+	    echo "<DATA>" >> $SENDTOHTML
+            echo "<br><br>" >> $SENDTOHTML
+            echo "<pre>" >> $SENDTOHTML
+            echo "<a href="$file">$file</a>" >> $SENDTOHTML $ <---- needs relative link
+            echo "$(stat "$file")" >> $SENDTOHTML
+            echo "</pre>" >> $SENDTOHTML
+            echo "<br>" >> $SENDTOHTML
+          
+            echo "md5sum  :  $(md5sum  "$file") <BR>" >> $SENDTOHTML
+            echo "sha1sum :  $(sha1sum "$file") <BR>" >> $SENDTOHTML
+            ADDTHUMBNAIL $file 
+            echo "<HR>" >> $SENDTOHTML  
+        #echo "----------------------------------------------------------------------------------------------------------------------------------<p\>" >> "$SENDTOHTML"
+       echo "</DATA>" >> $SENDTOHTML
+ fi
+        echo "$SENDTOHTML" >> "$OUT_DIRECTORY/closelist.txt"
+    
+    done
+
+exit 1    
+    
+uniq "$OUT_DIRECTORY/closelist.txt" > "$OUT_DIRECTORY"/uniqlist.txt
+
+# **********************  Write the html document files *************************************************************** 
+
+for OBJECT in  $(cat uniqlist.txt)
+    do
+
+        HTMLHEADER () "$OBJECT"
+        HTMLFOOTER () "$OBJECT" | cat - "$OBJECT" | uniq - /tmp/out && mv /tmp/out $OBJECT
+
+echo "<hr></body></html>" >> "$OBJECT"
+echo "<html><header></header><body><p><p><HR>" 
+    
+    done
+
+    #rm -f /home/slippery/Temp_report_Output/closelist.txt
+    #rm -f /home/slippery/Temp_report_Output/uniqlist.txt
+    #rm -f typ_object.txt
+    #rm -f -r 
+    #rm IMAGE_DIR
+

@@ -1,0 +1,154 @@
+#! /bin/bash
+#
+# Created by SLP of NW3C  12/12/2016
+# This batch file is used to generate an HTML REPORT for  
+# Reporting Results of an investigation.
+#
+# usage: Report_GEN
+# --- still working on gui ----
+#   <path to a Banner Text File>
+#   <path to Image for Banner>
+#   Other options not present yet, 
+#    - BANNEROBJ=OBJ"$3"
+#    - IMAGEOBJ=OBJ"$4"
+#    - Disclaimer information
+#    - Case Agent/Investigator/Detective.
+
+# -----  Functions here --------------------
+
+function funcbtnCreate() {
+   echo '<button>
+         <input file stock="gtk-'$2'"></input>
+         <action>fileselect:'$1'</action>
+         </button>'
+} 
+
+export conf_dialog='
+<window title="Option Confirmation">
+   <vbox>
+       <hbox>
+            <text>
+            <input file>'"./optionsfile"'</input>
+            </text>
+       </hbox>
+   </vbox>
+</window>
+'
+
+#BANNER_TXT = Banner text file
+#BANNERIMAGE = Banner Image file
+#SRC_DIRECTORY = Report Source Directory
+#OUT_DIRECTORY = Report Output Directory
+
+
+
+# ---------------------------------------------
+
+# ------- pgm wide variables
+
+GTKDIALOG=gtkdialog
+
+export MAIN_DIALOG='
+
+<window title="NW3C Report Generator" resizeable="true" width-request="900">
+  
+<frame>     
+     <vbox>
+        <pixmap>
+            <input file>PICTURES_1.jpg</input><height>600</height><width>880</width>
+        </pixmap>
+            
+        <text use-markup="true" xalign="0">
+        <label>"<b><u><span size='"'large'"' color='"'blue'"'>Standard Report Options</span></u></b>"</label>
+        </text>
+        <hbox>
+                <text label="Banner Text" width-request="90"></text>
+                <entry fs-action="file" 
+                    fs-folder="'$HOME'"
+                    fs-filters="*.txt">
+                <default>"Enter the path to a standard Banner Text file"</default>
+                <variable>BANNER_TXT</variable>
+                </entry>
+                '"$(funcbtnCreate BANNER_TXT open)"' 
+            </hbox>
+            
+            <hbox>
+                <text label="Banner Image" width-request="90"></text>
+                <entry fs-action="file" 
+                    fs-folder="'$HOME'"
+                    fs-filters="*.jpg">
+                <default>"Enter the path to a Banner Image file"</default>
+                <variable>BANNERIMAGE</variable>
+                </entry>
+                '"$(funcbtnCreate BANNERIMAGE open)"'
+            </hbox>
+        
+            <hbox>
+                <text label="Examiner Info" width-request="90"></text>
+                <entry fs-action="file"
+                    fs-folder="'$HOME'" 
+                    fs-filter="*.txt">
+                <default>"Enter the path to a Examiner Information text file"</default>
+                <variable>Exmnr_Info</variable>
+                </entry>
+                '"$(funcbtnCreate Exmnr_Info open)"'
+            </hbox>
+    </vbox>
+      <text width-chars="40" height-request="40"><label>""</label></text>
+        <hseparator heigth="10"></hseparator>
+
+
+    <vbox>
+        <text use-markup="true" xalign="0">
+        <label>"<b><u><span size='"'large'"' color='"'blue'"'>Select Source and Output Directories</span></u></b>"</label>
+        </text>
+        <hbox>
+            <text label="SOURCE DIR" width-request="90"></text>
+                <entry 
+                fs-action="folder"
+                fs-folder="'$HOME'"
+                fs-title="Select A Source Directory">
+                <default>"Select Source Directory"</default>
+                <variable>SRC_DIRECTORY</variable>
+                </entry>
+                '"$(funcbtnCreate SRC_DIRECTORY open)"'
+        </hbox>
+        
+        <hbox>
+            <text label="OUTPUT DIR" width-request="90"></text>
+                <entry fs-action="folder"
+                fs-folder="'$HOME'"
+                fs-title="Select An Output Directory">
+                <default> Select the Output Directory</default>
+                <variable>OUT_DIRECTORY</variable>
+                </entry>
+                '"$(funcbtnCreate OUT_DIRECTORY open)"'
+        </hbox>
+    </vbox>
+    <text width-chars="40" height-request="40"><label>""</label></text>
+    <vbox>
+    <text use-markup="true" xalign="0">
+        <label>"<b><u><span size='"'large'"' color='"'blue'"'>Select Accept Options</span></u></b>"</label>
+        </text>
+    
+    
+    
+    
+    <hbox>
+            <button help></button>
+            <button ok>
+            <action>./Report_Generator "$SRC_DIRECTORY" "$OUT_DIRECTORY" </action>
+            <action function="exit"></action>
+            </button>    
+            <button cancel>
+                <action type="exit">OK</action>
+            </button>
+        </hbox>
+    </vbox>
+</frame>    
+</window>'
+
+
+case $1 in -d | --dump) echo "$MAIN_DIALOG" ;;
+*) $GTKDIALOG --program=MAIN_DIALOG --center;;
+esac

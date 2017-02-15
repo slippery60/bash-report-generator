@@ -1,0 +1,12 @@
+<html>
+<head>
+<title>Report Main Page</title>
+</head>
+<frameset rows="200,">
+	<frame name="banner" src="../MnPgContnt/banner.html"></frame>
+	<frameset name="mainpgblock" cols="150,"
+		<frame name="mainpgindex" src="../MnPgContnt/mainpage_index.html"></frame> 
+		<frame name="mainpginfo" src="../mainpg_welcome.html"></frame>
+	</frameset>
+</frameset>
+</html>

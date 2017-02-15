@@ -1,0 +1,195 @@
+#!/bin/bash
+#
+# Created by SLP of NW3C  10/11/2016
+# This batch file is used to generate an HTML REPORT for  
+# Reporting Results of an investigation.
+#
+# usage: Report_GEN
+# 
+#   <path to a Banner Text File>
+#   <path to Image for Banner>
+#   Other options not present yet, 
+#    - BANNEROBJ=OBJ"$3"
+#    - IMAGEOBJ=OBJ"$4"
+#    - Disclaimer information
+#    - Case Agent/Investigator/Detective.
+
+
+#use the best version of Dialog
+if [ -z $DISPLAY ]
+then
+	DIALOG=dialog
+else 
+	DIALOG=Xdialog
+fi
+
+
+#get source and ouput location for reporting
+SRC_DIR=""
+SRC_DIR=`$DIALOG --stdout --title "Choose an Input / Src Directory" --dselect $HOME 50 100 `
+
+case $? in
+    0)  echo "The information for this report will come from " $SRC_DIR ;;
+    
+    1)  echo "Cancel Pressed" 
+                exit 1;;
+    255) echo "Box Closed." 
+                exit 255;;
+esac
+
+#get the output Directory
+
+OUT_DIR=""
+OUT_DIR=`$DIALOG --stdout --title "Choose an Output Directory" --dselect $HOME 50 100 `
+
+case $? in
+    0)  echo "The Report will be created in the Directory: " $OUT_DIR ;;
+    
+    1)  echo "Cancel Pressed" 
+                exit 1;;
+    255) echo "Box Closed." 
+                exit 255;;
+esac
+
+
+# MAIN Report index file
+
+MAIN_RPT="$OUT_DIR/report_index.html"
+
+#MAIN_RPT="report_index.html"    - hold for new code testing
+
+
+
+#FILEOBJ is the current file or directory being reviewed
+#RESULTS - function output
+RESULTS=""
+#********************************************************************************************************************
+#********************************************************************************************************************
+
+function HTMLHEADER() {
+
+FILE_OBJ="$1"
+#    echo "$FILE_OBJ"
+    echo "<html><header>" >> "$FILE_OBJ"
+#    if ![ "$IMAGEOBJ"="OBJ"]
+#        then 
+#        echo "</header><body background="$IMAGEOBJ"><P><P><HR>" >> "$FILE_OBJ"
+#    else
+        echo "</header><body><P><P><HR>" >> "$FILE_OBJ"
+#   fi    
+
+echo "<table border=1><tr><td width=\"40%\"></td> " >> "$FILE_OBJ"
+echo "<td width=60%><h1>Banner.txt goes here</h1><P></td>" >> "$FILE_OBJ"
+echo "</tr></table>" >> "$FILE_OBJ"
+echo "<hr>" >> "$FILE_OBJ" 
+    
+echo "<table><tr><td width=\"15%\"></td><td width=\"70%\"></td><td width=\"15%\"></td></tr>"
+}
+#********************************************************************************************************************
+
+function HTMLFOOTER() {
+    echo "--------------------------------------------------------------------------------------------" >> "$FILE_OBJ"
+    echo "</body></html>" >>  "$FILE_OBJ"
+}
+#********************************************************************************************************************
+
+function ADDTHUMBNAIL() {
+# Create a Thumbnail and embed it into the report At the right location
+
+        IMAGE_DIR="$1"
+
+    if ![ -e IMAGE_DIR ] 
+        then
+            mkdir IMAGE_DIR
+        fi
+
+	if [ -f "$JPGOBJECT" ]
+	then 
+
+           file "$JPGOBJECT" > typ_object.txt    
+            if grep -q JPEG typ_object.txt
+            then
+            echo "  File: $JPGOBJECT is a Graphic file"
+                #cp $JPGOBJECT ./IMAGE_DIR
+                outputfile="./IMAGE_DIR/tn_$JPGOBJECT"
+                
+                convert $JPGOBJECT -resize 200x200 "$outputfile"
+            echo "<img src=\"$outputfile\" height=\"200\" width=\"200\"><p>" >> image_file.html
+            else 
+            echo "  File: $JPGOBJECT"
+                    
+            fi
+        fi
+}
+#********************************************************************************************************************
+
+
+#####################################################################################################################
+##############                                                                       ################################
+##############                         Main Program                                  ################################
+##############                                                                       ################################
+#####################################################################################################################
+
+
+
+find "$SRC_DIR" -print0 | while IFS= read -r -d '' file
+# create list of file to examine. into file DIRLIST
+
+do 
+    echo "$file"
+    DIRLIST="$(dirname "$file")"
+    echo -e $DIRLIST
+     SENDTOHTML="$OUT_DIR/$(basename "$DIRLIST").html"  #---- hold during testing of new code
+#    SENDTOHTML="/home/slippery/Temp_report_Output/$(basename "$DIRLIST").html"  ---- hold during testing of new code
+    
+#    SENDTOHTML=$MAIN_RPT
+    echo "----------------------------------------------------------------------------------------------------------------------------------<p>" >> "$SENDTOHTML"
+
+#exit 1
+    if [[ -d $file ]]
+        then
+            echo "output file should be $SENDTOHTML"
+            
+        else
+            echo "<DATA>" >> $SENDTOHTML
+            echo "<br><br>" >> $SENDTOHTML
+            echo "<pre>" >> $SENDTOHTML
+            echo "$(stat "$file")" >> $SENDTOHTML
+            echo "</pre>" >> $SENDTOHTML
+            echo "<br>" >> $SENDTOHTML
+            echo "<HR>" >> $SENDTOHTML
+            echo "md5sum  : " $(md5sum  "$file") "<BR>" >> $SENDTOHTML
+            echo "sha1sum : " $(sha1sum "$file") "<BR>" >> $SENDTOHTML
+                  
+            file "$JPGOBJECT" > typ_object.txt    
+           if grep -q JPEG typ_object.txt
+               then
+              ADDTHUMBNAIL "$file"              
+           fi   
+            
+        echo "----------------------------------------------------------------------------------------------------------------------------------<p>" >> "$SENDTOHTML"
+       echo "<DATA>" >> $SENDTOHTML
+ fi
+#    echo "$SENDTOHTML" >> "$OUT_DIR/Temp_report_Output/closelist.txt"
+    echo "$SENDTOHTML" >> "$OUT_DIR/closelist.txt"
+    
+done
+
+uniq "$(OUT_DIR)/closelist.txt" > "$(OUT_DIR)/uniqlist.txt"
+
+for OBJECT in  $(cat uniqlist.txt)
+do
+
+    HTMLHEADER "$OBJECT"
+    HTMLFOOTER "$OBJECT" | cat - "$OBJECT" | uniq - /tmp/out && mv /tmp/out $OBJECT
+
+#   echo "<hr></body></html>" >> "$OBJECT"
+#   echo "<html><header></header><body><p><p><HR>" 
+    
+done
+
+rm -f /home/slippery/Temp_report_Output/closelist.txt
+rm -f /home/slippery/Temp_report_Output/uniqlist.txt
+rm -f typ_object.txt
+rm -f -r #rm IMAGE_DIR
+
